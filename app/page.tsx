@@ -59,6 +59,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { VulnerabilityLabs } from "@/components/vulnerability-labs";
+import { PortfolioHome } from "@/components/portfolio-home";
 import { Input } from "@/components/ui/input";
 import type {
   Actor,
@@ -70,6 +71,7 @@ import type {
 } from "@/lib/security/engine";
 
 type View =
+  | "Portfolio"
   | "Overview"
   | "Vulnerability tests"
   | "Security lab"
@@ -78,7 +80,7 @@ type View =
   | "Project guide";
 type Data = LabState & { alerts: Alert[] };
 const navigation = [
-  { icon: LayoutDashboard, label: "Overview" },
+  { icon: LayoutDashboard, label: "Portfolio" },
   { icon: Code2, label: "Vulnerability tests" },
   { icon: FlaskConical, label: "Security lab" },
   { icon: Radar, label: "Activity & alerts" },
@@ -86,6 +88,11 @@ const navigation = [
   { icon: BookOpen, label: "Project guide" },
 ] as const;
 const titles: Record<View, [string, string, string]> = {
+  Portfolio: [
+    "AARAV REGO · SECURITY ENGINEERING",
+    "Build with curiosity. Test with evidence.",
+    "A portfolio of security engineering, systems work, and practical experiments.",
+  ],
   Overview: [
     "SECURITY AT A GLANCE",
     "Know the risk. Prove the fix.",
@@ -163,7 +170,7 @@ const date = (s: string) =>
     minute: "2-digit",
   });
 export default function Home() {
-  const [view, setView] = useState<View>("Vulnerability tests");
+  const [view, setView] = useState<View>("Portfolio");
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -566,6 +573,7 @@ export default function Home() {
             </div>
           )}
           {view === "Vulnerability tests" && <VulnerabilityLabs runs={data?.suiteRuns ?? []} enabled={!!data} busy={busy} act={act} />}
+          {view === "Portfolio" && <PortfolioHome onOpenLabs={() => setView("Vulnerability tests")} />}
           {view === "Overview" && (
             <>
               <div className="stats">
