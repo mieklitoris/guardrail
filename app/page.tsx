@@ -172,7 +172,7 @@ const date = (s: string) =>
 export default function Home() {
   const [view, setView] = useState<View>("Portfolio");
   const [data, setData] = useState<Data | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -206,8 +206,14 @@ export default function Home() {
     }
   }, []);
   useEffect(() => {
+    if (view === "Portfolio") {
+      setLoading(false);
+      setError("");
+      setAuthRequired(false);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [load, view]);
   const act = useCallback(async (action: Action) => {
     setBusy(true);
     setError("");
@@ -529,7 +535,7 @@ export default function Home() {
               <p>{titles[view][2]}</p>
             </div>
             <Button
-              className={`primary-action ${view === "Vulnerability tests" ? "hidden" : ""}`}
+              className={`primary-action ${view === "Vulnerability tests" || view === "Portfolio" ? "hidden" : ""}`}
               disabled={busy || !data}
               onClick={() => run({ action: "investigate" })}
             >
@@ -541,12 +547,12 @@ export default function Home() {
               {busy ? "Working…" : "Run investigation"}
             </Button>
           </div>
-          {loading && (
+          {loading && view !== "Portfolio" && (
             <p className="loading" role="status">
               Loading your lab workspace…
             </p>
           )}
-          {error && (
+          {error && view !== "Portfolio" && (
             <div role="alert" className="error-box">
               <AlertTriangle size={18} />
               <span>{error}</span>
@@ -566,7 +572,7 @@ export default function Home() {
               )}
             </div>
           )}
-          {notice && (
+          {notice && view !== "Portfolio" && (
             <div className="notice" role="status">
               <CheckCircle2 size={18} />
               {notice}
