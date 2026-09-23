@@ -2,7 +2,7 @@
 
 **Test access controls. Investigate the signal. Prove the fix.**
 
-Guardrail is a full-stack security engineering portfolio project by Aarav Rego. It combines an isolated ticket-access sandbox, reproducible security checks, rule-based event correlation, and persistent evidence in a React dashboard.
+Guardrail is a full-stack security engineering portfolio project. It combines an isolated ticket-access sandbox, reproducible security checks, rule-based event correlation, and persistent evidence in a React dashboard.
 
 > This is a synthetic teaching lab, not a live vulnerability scanner or production SIEM. Auth and prompt fixtures are evaluated in-process; fixed XSS probes execute only in opaque-origin sandboxed frames. No vulnerable application endpoint is exposed. Profile selection does not weaken the deployed app.
 
