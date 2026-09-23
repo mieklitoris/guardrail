@@ -1,3 +1,4 @@
+import { applyVulnerabilityAction } from "@/lib/security/vulnerability-labs";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { database } from "@/lib/database";
 import {
@@ -34,6 +35,7 @@ async function load(owner: string) {
 function publicState(state: LabState) {
   return {
     ...state,
+    suiteRuns: state.suiteRuns ?? [],
     tickets: state.tickets.map(({ id, owner, status }) => ({
       id,
       owner,
@@ -86,7 +88,9 @@ export async function POST(request: Request) {
       );
     let result;
     try {
-      result = applyAction(state, action);
+      result = action.action === "run_vulnerability_suite" || action.action === "record_xss_suite"
+        ? await applyVulnerabilityAction(state, action)
+        : applyAction(state, action);
     } catch (error) {
       return response(
         { error: error instanceof Error ? error.message : "Action failed." },
@@ -110,7 +114,7 @@ export async function POST(request: Request) {
     return response({
       ...publicState(result.state),
       message: result.message,
-      ticket: result.ticket,
+      ticket: "ticket" in result ? result.ticket : undefined,
     });
   } catch (error) {
     console.error("Lab action failed", error);

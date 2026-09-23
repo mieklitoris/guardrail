@@ -58,6 +58,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { VulnerabilityLabs } from "@/components/vulnerability-labs";
 import { Input } from "@/components/ui/input";
 import type {
   Actor,
@@ -70,6 +71,7 @@ import type {
 
 type View =
   | "Overview"
+  | "Vulnerability tests"
   | "Security lab"
   | "Activity & alerts"
   | "Findings & fixes"
@@ -77,6 +79,7 @@ type View =
 type Data = LabState & { alerts: Alert[] };
 const navigation = [
   { icon: LayoutDashboard, label: "Overview" },
+  { icon: Code2, label: "Vulnerability tests" },
   { icon: FlaskConical, label: "Security lab" },
   { icon: Radar, label: "Activity & alerts" },
   { icon: FileCheck2, label: "Findings & fixes" },
@@ -87,6 +90,11 @@ const titles: Record<View, [string, string, string]> = {
     "SECURITY AT A GLANCE",
     "Know the risk. Prove the fix.",
     "Your application security and detection work, in one place.",
+  ],
+  "Vulnerability tests": [
+    "XSS · PROMPT INJECTION · AUTH",
+    "Put the defenses to the test.",
+    "Reproduce a weakness. Inspect the evidence. Verify the hardened fixture.",
   ],
   "Security lab": [
     "CONTROLLED TEST ENVIRONMENT",
@@ -155,7 +163,7 @@ const date = (s: string) =>
     minute: "2-digit",
   });
 export default function Home() {
-  const [view, setView] = useState<View>("Overview");
+  const [view, setView] = useState<View>("Vulnerability tests");
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -218,6 +226,7 @@ export default function Home() {
         message: d.message,
         runs: d.runs.length,
         alerts: d.alerts.length,
+        vulnerabilityRun: action.action === "run_vulnerability_suite" || action.action === "record_xss_suite" ? d.suiteRuns?.[0] : undefined,
       };
     } catch (e) {
       setError(e instanceof Error ? e.message : "The action failed.");
@@ -278,6 +287,23 @@ export default function Home() {
         { signal: lifecycle.signal },
       ),
     ).catch(() => {});
+    Promise.resolve(context.registerTool({
+      name: "run_guardrail_vulnerability_suite",
+      description: "Run and save one built-in XSS, prompt-injection simulator, or signed-session auth suite against the selected fixture configuration. XSS executes only fixed browser probes in isolated frames; no external target is contacted.",
+      inputSchema: { type: "object", properties: { suite: {type:"string",enum:["xss","prompt","auth"]},profile:{type:"string",enum:["baseline","hardened"]}},required:["suite","profile"],additionalProperties:false },
+      annotations: {readOnlyHint:false,untrustedContentHint:false},
+      async execute(input) {
+        if(!input||typeof input!=="object")throw Error("Choose a suite and profile.");
+        const {suite,profile}=input as {suite:unknown;profile:unknown};
+        if((suite!=="xss"&&suite!=="prompt"&&suite!=="auth")||(profile!=="baseline"&&profile!=="hardened"))throw Error("Invalid suite or profile.");
+        setView("Vulnerability tests");
+        if(suite==="xss") {
+          const {runXssBrowser}=await import("@/lib/security/xss-browser");
+          return act({action:"record_xss_suite",profile,observations:await runXssBrowser(profile)});
+        }
+        return act({action:"run_vulnerability_suite",suite,profile});
+      }
+    },{signal:lifecycle.signal})).catch(()=>{});
     return () => lifecycle.abort();
   }, [act]);
   const latest = data?.runs[0];
@@ -295,6 +321,7 @@ export default function Home() {
             exportedAt: new Date().toISOString(),
             scope: "Synthetic isolated lab. Not a live website assessment.",
             runs: data.runs,
+            vulnerabilityRuns: data.suiteRuns ?? [],
             alerts: data.alerts,
             events: data.events,
           },
@@ -495,7 +522,7 @@ export default function Home() {
               <p>{titles[view][2]}</p>
             </div>
             <Button
-              className="primary-action"
+              className={`primary-action ${view === "Vulnerability tests" ? "hidden" : ""}`}
               disabled={busy || !data}
               onClick={() => run({ action: "investigate" })}
             >
@@ -538,6 +565,7 @@ export default function Home() {
               {notice}
             </div>
           )}
+          {view === "Vulnerability tests" && <VulnerabilityLabs runs={data?.suiteRuns ?? []} enabled={!!data} busy={busy} act={act} />}
           {view === "Overview" && (
             <>
               <div className="stats">

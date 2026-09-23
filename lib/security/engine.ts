@@ -1,3 +1,4 @@
+import { parseVulnerabilityAction, type VulnerabilityAction, type SuiteRun } from "./vulnerability-labs.ts";
 /** Pure, deterministic lab logic. No outbound requests or live vulnerable routes. */
 export type Actor = "alice" | "bob" | "admin";
 export type Profile = "baseline" | "hardened";
@@ -43,6 +44,7 @@ export type LabState = {
   events: SecurityEvent[];
   tickets: Ticket[];
   lastActionAt: number;
+  suiteRuns?: SuiteRun[];
 };
 export const initialState = (): LabState => ({
   version: 1,
@@ -237,6 +239,7 @@ export function detect(events: SecurityEvent[]): Alert[] {
   return alerts.sort((a, b) => b.last.localeCompare(a.last));
 }
 export type Action =
+  | VulnerabilityAction
   | { action: "scan"; profile: Profile }
   | { action: "investigate" }
   | { action: "simulate_logins" }
@@ -246,6 +249,8 @@ export function parseAction(value: unknown): Action {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Choose a supported lab action.");
   const v = value as Record<string, unknown>;
+  const vulnerabilityAction = parseVulnerabilityAction(v);
+  if (vulnerabilityAction) return vulnerabilityAction;
   if (v.action === "investigate" || v.action === "simulate_logins")
     return { action: v.action };
   if (
