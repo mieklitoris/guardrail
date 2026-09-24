@@ -9,6 +9,7 @@ import {
   type LabState,
 } from "@/lib/security/engine";
 export const dynamic = "force-dynamic";
+const PUBLIC_DEMO_OWNER = "public-demo";
 const response = (body: unknown, status = 200) =>
   Response.json(body, {
     status,
@@ -47,9 +48,7 @@ function publicState(state: LabState) {
 export async function GET() {
   try {
     const user = await getChatGPTUser();
-    if (!user)
-      return response({ error: "Sign in to use your lab workspace." }, 401);
-    const { state } = await load(user.userId);
+    const { state } = await load(user?.userId ?? PUBLIC_DEMO_OWNER);
     return response(publicState(state));
   } catch (error) {
     console.error("Lab load failed", error);
@@ -62,8 +61,6 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getChatGPTUser();
-    if (!user)
-      return response({ error: "Sign in to use your lab workspace." }, 401);
     if (request.headers.get("origin") !== new URL(request.url).origin)
       return response({ error: "Same-origin requests are required." }, 403);
     if (!request.headers.get("content-type")?.startsWith("application/json"))
@@ -80,7 +77,8 @@ export async function POST(request: Request) {
         400,
       );
     }
-    const { state, revision } = await load(user.userId);
+    const owner = user?.userId ?? PUBLIC_DEMO_OWNER;
+    const { state, revision } = await load(owner);
     if (Date.now() - state.lastActionAt < 800)
       return response(
         { error: "Please wait a moment before the next lab action." },
@@ -101,7 +99,7 @@ export async function POST(request: Request) {
       .prepare(
         "UPDATE lab_workspaces SET state=?,revision=revision+1 WHERE owner=? AND revision=?",
       )
-      .bind(JSON.stringify(result.state), user.userId, revision)
+        .bind(JSON.stringify(result.state), owner, revision)
       .run();
     if (changed.meta.changes !== 1)
       return response(
